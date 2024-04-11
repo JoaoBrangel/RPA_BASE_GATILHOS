@@ -1,11 +1,82 @@
 
 
+DECLARE @DIRETORIO			VARCHAR(200)
+DECLARE @COMANDO			VARCHAR(200)
+DECLARE @ARQUIVOESCOLHIDO	VARCHAR(200)
+DECLARE	@DIA				VARCHAR(20)		=	DAY(GETDATE())
+DECLARE	@ANO				VARCHAR(20)		=	YEAR(GETDATE())
+DECLARE	@MES				VARCHAR(20)		
+DECLARE @PASTA_DIA_MES		VARCHAR(200)	=	(select replace(convert(varchar(5), getdate(), 103), '/', '_'))
+DECLARE @COPY				VARCHAR(200)
+DECLARE @DESTINO			VARCHAR(200	)	=	'\\192.168.0.48\ti$\Analistas\João\RPA_BASE_GATILHOS\PROCESSADOS' -- lev
+--		PRINT @PASTA_DIA_MES
 
-<<<<<<< HEAD
-temp_base_gatilhos
+SET		@MES	=	(
+						CASE 
+							WHEN	MONTH(GETDATE())	=	1	THEN	'01 - JANEIRO'
+							WHEN	MONTH(GETDATE())	=	2	THEN	'02 - FEVEREIRO'
+							WHEN	MONTH(GETDATE())	=	3	THEN	'03 - MARÇO'
+							WHEN	MONTH(GETDATE())	=	4	THEN	'04 - ABRIL'
+							WHEN	MONTH(GETDATE())	=	5	THEN	'05 - MAIO'
+							WHEN	MONTH(GETDATE())	=	6	THEN	'06 - JUNHO'
+							WHEN	MONTH(GETDATE())	=	7	THEN	'07 - JULHO'
+							WHEN	MONTH(GETDATE())	=	8	THEN	'08 - AGOSTO'
+							WHEN	MONTH(GETDATE())	=	9	THEN	'09 - SETEMBRO'
+							WHEN	MONTH(GETDATE())	=	10	THEN	'10 - OUTUBRO'
+							WHEN	MONTH(GETDATE())	=	11	THEN	'11 - NOVEMBRO'
+							WHEN	MONTH(GETDATE())	=	12	THEN	'12 - DEZEMBRO'
+						END
+					)
+
+IF(convert(varchar(5),GETDATE(),108)) < '14:00' 
+begin
+		SET	@DIRETORIO	=	'"\\192.168.0.48\EDI\' + @ano + '\' + @MES + '\' + @PASTA_DIA_MES
+		SET	@COMANDO	=	'dir ' + @DIRETORIO + '" /b'
+end
+else
+begin
+		SET	@DIRETORIO	=	'"\\192.168.0.48\EDI\' + @ano + '\' + @MES + '\' + @PASTA_DIA_MES + '_' + '1'
+		SET	@COMANDO	=	'dir ' + @DIRETORIO + '" /b'
+
+end
 
 
-truncate table temp_base_gatilhos
+-- ============================================================================================================
+		
+DROP TABLE IF EXISTS #ARQUIVOS
+
+CREATE TABLE #ARQUIVOS
+(	NOMEARQUIVO VARCHAR (200)
+)
+
+INSERT INTO #ARQUIVOS
+EXEC xp_cmdshell	@comando 
+
+
+SET @ARQUIVOESCOLHIDO = (
+							SELECT 
+									NOMEARQUIVO 
+							FROM	#ARQUIVOS	
+							WHERE	NOMEARQUIVO LIKE	'%base_gatilho%'
+							and		NOMEARQUIVO LIKE	'%' + @DIA + '%' + SUBSTRING(@MES, 1, 2) + '%' + @ANO + '%'
+						)
+ print @ARQUIVOESCOLHIDO
+-- ============================================================================================================
+
+
+-- Comando para copiar o arquivo usando o comando COPY do Windows
+SET @COPY = 'COPY ' + @DIRETORIO + '\'+ @ARQUIVOESCOLHIDO + '"  "' + @DESTINO +'"';
+
+PRINT @COPY 
+-- Executar o comando usando xp_cmdshell
+EXEC xp_cmdshell @COPY;
+
+
+
+
+
+-- ============================================================================================================
+--truncate table temp_base_gatilhos
 
 drop table if exists #temp_base_gatilho
 CREATE TABLE #temp_base_gatilho (
@@ -74,7 +145,7 @@ CREATE TABLE #temp_base_gatilho (
 
 
 bulk insert #temp_base_gatilho
-from '\\192.168.0.48\ti$\Analistas\João\RPA_BASE_GATILHOS\lista.csv'
+from '\\192.168.0.48\ti$\Analistas\João\RPA_BASE_GATILHOS\lista.csv'  -- ====================== trocar dps ===============================================
 with(
 	FIELDTERMINATOR = ';', -- Delimitador de campo (vírgula no caso de um arquivo CSV)
     ROWTERMINATOR = '0x0a', -- Delimitador de linha (nova linha)
@@ -166,22 +237,20 @@ truncate table TBL_MESA_SEM_ATUACAO_INSERIR_TEMP; -- TRUNCANDO
 
 
 			
-	create table	TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR_TEMP(
-		CNPJ_COMPLETO	VARCHAR(255),
-		NOME_CLI	VARCHAR(255),
-		taxa_ant	VARCHAR(255),
-		taxa_atual	VARCHAR(255)
-	)
+	--create table	TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR_TEMP(
+	--	CNPJ_COMPLETO	VARCHAR(255),
+	--	NOME_CLI	VARCHAR(255),
+	--	taxa_ant	VARCHAR(255),
+	--	taxa_atual	VARCHAR(255)
+	--)
 
 
-	create table TBL_MESA_SEM_ATUACAO_INSERIR_TEMP(
-	CNPJ_COMPLETO	VARCHAR(255),
-	NOME_CLI		VARCHAR(255),
-	ATR_CLI			VARCHAR(255),
-	VLR_CA6_CLI		VARCHAR(255),	
-	FILA			VARCHAR(255),
-	Alcada_Mesa		VARCHAR(255)
+	--create table TBL_MESA_SEM_ATUACAO_INSERIR_TEMP(
+	--CNPJ_COMPLETO	VARCHAR(255),
+	--NOME_CLI		VARCHAR(255),
+	--ATR_CLI			VARCHAR(255),
+	--VLR_CA6_CLI		VARCHAR(255),	
+	--FILA			VARCHAR(255),
+	--Alcada_Mesa		VARCHAR(255)
 
-	)
-=======
->>>>>>> fdcb5834883646e46c24cb117c7dedb1dc039786
+	--)
