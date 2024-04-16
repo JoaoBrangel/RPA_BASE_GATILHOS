@@ -454,7 +454,7 @@ SET @ARQUIVOESCOLHIDO = (
 
 			SET @mensagem1 += '</table>';
 			SET @mensagem1 += '</br>';
-			SET @mensagem1 += '<h5 style="text-align: center;">Nome do job: [TI] - Retirada BlakList: </h5>';
+			SET @mensagem1 += '<h5 style="text-align: center;">Nome do job: [ITAU PJ] - BASE GATILHOS INSERIR: </h5>';
 
 			EXEC MSDB.DBO.SP_SEND_DBMAIL
 				@recipients = @para1,
