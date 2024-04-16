@@ -1,4 +1,6 @@
 
+use safra;
+
 DECLARE @DIRETORIO				VARCHAR(200)
 DECLARE @COMANDO				VARCHAR(200)
 DECLARE @ARQUIVOESCOLHIDO		VARCHAR(200)
@@ -11,8 +13,6 @@ DECLARE @MOVE					VARCHAR(255)
 DECLARE @CAMINHO_PROCESSADOS	VARCHAR(255)	=   '\\192.168.0.46\import_cobweb\ITAU_BASE_GATILHOS\PROCESSADOS'
 DECLARE @DESTINO				VARCHAR(200)	=	'\\192.168.0.46\import_cobweb\ITAU_BASE_GATILHOS' -- lev
 DECLARE @RENAME					VARCHAR(255);
-
---		PRINT @PASTA_DIA_MES
 
 SET		@MES	=	(
 						CASE 
@@ -42,7 +42,6 @@ begin
 		SET	@COMANDO	=	'dir ' + @DIRETORIO + '" /b'
 
 end
-
 
 -- ============================================================================================================
 		
@@ -81,7 +80,6 @@ SET @ARQUIVOESCOLHIDO = (
 		--PRINT @COPY 
 		-- Executar o comando usando xp_cmdshell
 		EXEC xp_cmdshell @COPY;
-
 		-- ============================================================================================================
 		--truncate table temp_base_gatilhos
 
@@ -147,7 +145,7 @@ SET @ARQUIVOESCOLHIDO = (
 			ALCADA_PN_HOT VARCHAR(255),
 			PUBLICO_PN_HOT VARCHAR(255),
 			Flag_Quitacao_Parcela_cli VARCHAR(255),
-			Alcada_Mesa VARCHAR(255)
+			Alcada_Mesa NVARCHAR(max)
 		);
 
 		DECLARE @SQL_BULK NVARCHAR(MAX);
@@ -159,7 +157,8 @@ SET @ARQUIVOESCOLHIDO = (
 		WITH (
 			FIELDTERMINATOR = '';'', -- Delimitador de campo (vírgula no caso de um arquivo CSV)
 			ROWTERMINATOR = ''0x0a'', -- Delimitador de linha (nova linha)
-			FIRSTROW = 2 
+			FIRSTROW = 2 ,
+			CODEPAGE = ''acp''
 		);';
 
 		EXEC sp_executesql @SQL_BULK;
@@ -167,13 +166,13 @@ SET @ARQUIVOESCOLHIDO = (
 
 		-- =======================================================================================
 
-				truncate table TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR_TEMP; -- TRUNCANDO
-				print 'TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR_TEMP Truncada'
+				truncate table TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR; -- TRUNCANDO
+				print 'TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR Truncada'
 				PRINT ' '
 				PRINT '-------------------------------------------------------------------------------------'
 
-				insert INTO TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR_TEMP
-				SELECT 
+				insert INTO TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR
+				SELECT	distinct 
 				RIGHT(CNPJ_COMPLETO, 15)		AS	CNPJ_COMPLETO,
 				''								AS	CONTRATO_TIT,
 												DICA_CLI_FINAL
@@ -183,18 +182,18 @@ SET @ARQUIVOESCOLHIDO = (
 
 		-- ======================================================================================
 
-				truncate table TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR_TEMP; -- TRUNCANDO
+				truncate table TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR; -- TRUNCANDO
 				print 'TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR Truncada'
 				PRINT ' '
 				PRINT '-------------------------------------------------------------------------------------'
+			
 
-
-				insert INTO TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR_TEMP
-				SELECT 
+				insert INTO TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR
+				SELECT distinct
 				RIGHT(CNPJ_COMPLETO, 15)		AS	CNPJ_COMPLETO,
 				NOME_CLI						AS	NOME_CLI,
-				TAXA_CLI_ANT					AS	taxa_ant,
-				TAXA_CLI_ATUAL					AS	taxa_atual
+				CAST(REPLACE(TAXA_CLI_ANT	,	',', '.') AS FLOAT) AS taxa_ant,
+				CAST(REPLACE(TAXA_CLI_ATUAL	,	',', '.') AS FLOAT) AS taxa_atual
 				FROM	#temp_base_gatilho
 				where	CNPJ_COMPLETO			IS NOT NULL
 				and     TAXA_CLI_ANT			IS NOT NULL
@@ -203,20 +202,20 @@ SET @ARQUIVOESCOLHIDO = (
 
 		-- =======================================================================
 
-		truncate table TBL_MESA_SEM_ATUACAO_INSERIR_TEMP; -- TRUNCANDO
-				print 'TBL_MESA_SEM_ATUACAO_INSERIR_TEMP Truncada'
+		truncate table TBL_MESA_SEM_ATUACAO_INSERIR; -- TRUNCANDO
+				print 'TBL_MESA_SEM_ATUACAO_INSERIR Truncada'
 				PRINT ' '
 				PRINT '-------------------------------------------------------------------------------------'
 
-				insert INTO TBL_MESA_SEM_ATUACAO_INSERIR_TEMP
-				SELECT 
+				insert INTO TBL_MESA_SEM_ATUACAO_INSERIR
+				SELECT distinct
 				RIGHT(CNPJ_COMPLETO, 15)		AS	CNPJ_COMPLETO,
 				NOME_CLI						AS	NOME_CLI,
 				''								AS	ATR_CLI,
 				''								AS	VLR_CA6_CLI,
 				''								AS	FILA,
 				Alcada_Mesa						AS	Alcada_Mesa
-				FROM	ESPELHO_GATILHO_TEMP3
+				FROM	#temp_base_gatilho
 				where	CNPJ_COMPLETO			IS NOT NULL
 				AND     NOME_CLI				IS NOT NULL
 				AND		Alcada_Mesa				IS NOT NULL
@@ -238,63 +237,28 @@ SET @ARQUIVOESCOLHIDO = (
 		SELECT
 			(	SELECT 
 				COUNT		(ai.CNPJ_COMPLETO)
-				FROM		TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR_TEMP	ai
-				LEFT JOIN	TBL_PJ_DICA_FINAL_BASE_GATILHOS_teste			ma 
-				ON			ai.CNPJ_COMPLETO								= ma.CNPJ_COMPLETO)	
-																			AS qtde_DICA_FINAL,
+				FROM		TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR	ai
+				LEFT JOIN	TBL_PJ_DICA_FINAL_BASE_GATILHOS			ma 
+				ON			ai.CNPJ_COMPLETO						= ma.CNPJ_COMPLETO)	
+																	AS qtde_DICA_FINAL,
 			(	SELECT 
 				COUNT		(ai.CNPJ_COMPLETO)
-				FROM		TBL_MESA_SEM_ATUACAO_INSERIR_TEMP			ai
-				LEFT JOIN	TBL_MESA_SEM_ATUACAO_teste					ma 
-				ON			ai.CNPJ_COMPLETO							= ma.CNPJ_COMPLETO)	
-																		AS qtde_MESA_SEM_ATUACAO,
+				FROM		TBL_MESA_SEM_ATUACAO_INSERIR			ai
+				LEFT JOIN	TBL_MESA_SEM_ATUACAO					ma 
+				ON			ai.CNPJ_COMPLETO						= ma.CNPJ_COMPLETO)	
+																	AS qtde_MESA_SEM_ATUACAO,
 
 			(	SELECT 
 				COUNT		(ai.CNPJ_COMPLETO)
-				FROM		TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR_TEMP		ai
-				LEFT JOIN	TBL_MELHORES_TAXAS_ITAU_PJ_teste			ma 
-				ON			ai.CNPJ_COMPLETO							= ma.CNPJ_COMPLETO) 
-																		AS qtde_MELHORES_TAXAS_ITAU;
+				FROM		TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR		ai
+				LEFT JOIN	TBL_MELHORES_TAXAS_ITAU_PJ				ma 
+				ON			ai.CNPJ_COMPLETO						= ma.CNPJ_COMPLETO) 
+																	AS qtde_MELHORES_TAXAS_ITAU;
 
 
 
 
 		-- ============================================================================================================================================== MERGERS
-
-		--create table TBL_PJ_DICA_FINAL_BASE_GATILHOS_teste(
-		--	CNPJ_COMPLETO varchar(100)
-		--)
-
-		--create table TBL_MESA_SEM_ATUACAO_teste(
-		--	CNPJ_COMPLETO varchar(100)
-		--)
-
-		--create table TBL_MELHORES_TAXAS_ITAU_PJ_teste(
-		--	CNPJ_COMPLETO varchar(100)
-		--)
-		--insert into TBL_PJ_DICA_FINAL_BASE_GATILHOS_teste values
-		--('004325839000150'),
-		--('004325899000173'),
-		--('004326483000170'),
-		--('004326483000170'),
-		--('004327735000185')
-		--insert into TBL_MESA_SEM_ATUACAO_teste values
-		--('004325839000150'),
-		--('004325899000173'),
-		--('004326483000170'),
-		--('004326483000170'),
-		--('004327735000185')
-
-		--insert into TBL_MELHORES_TAXAS_ITAU_PJ_teste values
-		--('004325839000150'),
-		--('004325899000173'),
-		--('004326483000170'),
-		--('004326483000170'),
-		--('004327735000185')
-
-
-
-
 
 		MERGE 
 			TBL_PJ_DICA_FINAL_BASE_GATILHOS AS Destino
@@ -457,33 +421,33 @@ SET @ARQUIVOESCOLHIDO = (
 	 else
 	 begin
 			
-			DECLARE @para VARCHAR(1000)		= '';
-			DECLARE @assunto VARCHAR(1000)	= 'Base gatilhos teste';
-			DECLARE @mensagem VARCHAR(MAX)	= '';
+			DECLARE @para1 VARCHAR(1000)		= '';
+			DECLARE @assunto1 VARCHAR(1000)	= 'Base gatilhos teste';
+			DECLARE @mensagem1 VARCHAR(MAX)	= '';
 
-			SET @assunto = 'Base gatilhos teste';
+			SET @assunto1 = 'Base gatilhos teste';
 
-			SET @para += 'joao.reis@novaquest.com.br;';
-			SET @para += 'vinicius@novaquest.com.br;';
-			SET @para += 'micheli@novaquest.com.br';
-			SET @para += 'sistemas@novaquest.com.br';
+			SET @para1 += 'joao.reis@novaquest.com.br;';
+			SET @para1 += 'vinicius@novaquest.com.br;';
+			SET @para1 += 'micheli@novaquest.com.br';
+			SET @para1 += 'sistemas@novaquest.com.br';
 
-			SET @mensagem += '<style type="text/css">';
-			SET @mensagem += 'table, th, td {border: 1px solid black; border-collapse: collapse; padding: 0 5px 0 5px;}';
-			SET @mensagem += 'p {font-size: 12pt;}';
-			SET @mensagem += '</style>';
-			SET @mensagem += '<style type="text/css">';
-			SET @mensagem += 'table, th, td {border: 1px solid black; border-collapse: collapse; padding: 0 5px 0 5px;}';
-			SET @mensagem += 'th {background-color: #581845;color:white}'; -- Estilo para o cabeçalho
-			SET @mensagem += 'p {font-size: 12pt;}';
-			SET @mensagem += '</style>';
+			SET @mensagem1 += '<style type="text/css">';
+			SET @mensagem1 += 'table, th, td {border: 1px solid black; border-collapse: collapse; padding: 0 5px 0 5px;}';
+			SET @mensagem1 += 'p {font-size: 12pt;}';
+			SET @mensagem1 += '</style>';
+			SET @mensagem1 += '<style type="text/css">';
+			SET @mensagem1 += 'table, th, td {border: 1px solid black; border-collapse: collapse; padding: 0 5px 0 5px;}';
+			SET @mensagem1 += 'th {background-color: #581845;color:white}'; -- Estilo para o cabeçalho
+			SET @mensagem1 += 'p {font-size: 12pt;}';
+			SET @mensagem1 += '</style>';
 
-			SET @mensagem += '<h3 style="text-align: center;">Base gatilhos ERRO</h3>';
-			SET @mensagem += '<h4 style="text-align: center;">Arquivo não encontrado</h4>';
-			SET @mensagem += '</br>';
-			SET @mensagem += '<table align="center" style="text-align: center;" >';
-			SET @mensagem += '<tr>';
-			SET @mensagem += '<th>Arquivo não encontrado</th>';
+			SET @mensagem1 += '<h3 style="text-align: center;">Base gatilhos ERRO</h3>';
+			SET @mensagem1 += '<h4 style="text-align: center;">Arquivo não encontrado</h4>';
+			SET @mensagem1 += '</br>';
+			SET @mensagem1 += '<table align="center" style="text-align: center;" >';
+			SET @mensagem1 += '<tr>';
+			SET @mensagem1 += '<th>Arquivo não encontrado</th>';
 			--SET @mensagem += '<th>MESA_SEM_ATUACAO</th>';
 			--SET @mensagem += '<th>MELHORES_TAXAS_ITAU_PJ</th>';
 			--SET @mensagem += '</tr>';
@@ -494,14 +458,14 @@ SET @ARQUIVOESCOLHIDO = (
 			--				 FROM #temp_qtde_entradas_gatilhos
 			--				 FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)');
 
-			SET @mensagem += '</table>';
-			SET @mensagem += '</br>';
-			SET @mensagem += '<h5 style="text-align: center;">Nome do job: [TI] - Retirada BlakList: </h5>';
+			SET @mensagem1 += '</table>';
+			SET @mensagem1 += '</br>';
+			SET @mensagem1 += '<h5 style="text-align: center;">Nome do job: [TI] - Retirada BlakList: </h5>';
 
 			EXEC MSDB.DBO.SP_SEND_DBMAIL
-				@recipients = @para,
-				@subject = @assunto,
-				@body = @mensagem,
+				@recipients = @para1,
+				@subject = @assunto1,
+				@body = @mensagem1,
 				@body_format = 'HTML';
 	 end
 
@@ -564,4 +528,22 @@ SET @ARQUIVOESCOLHIDO = (
 	--FILA			VARCHAR(255),
 	--Alcada_Mesa		VARCHAR(255)
 
-	--)
+	DICA_CLI_FINAL
+	000067933000104
+	SELECT	
+				count(distinct min(t.DICA_CLI_FINAL)), CNPJ_COMPLETO
+				--''								AS	CONTRATO_TIT,
+				--								DICA_CLI_FINAL
+				FROM	#temp_base_gatilho		t
+				where     DICA_CLI_FINAL			is not null
+				--and	CNPJ_COMPLETO			like '%000067933000104%'
+				group by CNPJ_COMPLETO
+				having count(distinct t.DICA_CLI_FINAL) >1
+
+
+				select CNPJ_COMPLETO,max(DICA_CLI_FINAL) as [DICA_CLI_FINAL] from #temp_base_gatilho
+				where CNPJ_COMPLETO like '%000067933000104%'
+				group by CNPJ_COMPLETO
+
+
+
