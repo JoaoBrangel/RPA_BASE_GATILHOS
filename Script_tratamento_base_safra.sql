@@ -175,10 +175,11 @@ SET @ARQUIVOESCOLHIDO = (
 				SELECT	distinct 
 				RIGHT(CNPJ_COMPLETO, 15)		AS	CNPJ_COMPLETO,
 				''								AS	CONTRATO_TIT,
-												DICA_CLI_FINAL
+				max(DICA_CLI_FINAL)				as [DICA_CLI_FINAL]
 				FROM	#temp_base_gatilho
 				where	CNPJ_COMPLETO			is not null
 				and     DICA_CLI_FINAL			is not null
+				group by CNPJ_COMPLETO
 
 		-- ======================================================================================
 
@@ -202,7 +203,7 @@ SET @ARQUIVOESCOLHIDO = (
 
 		-- =======================================================================
 
-		truncate table TBL_MESA_SEM_ATUACAO_INSERIR; -- TRUNCANDO
+				truncate table TBL_MESA_SEM_ATUACAO_INSERIR; -- TRUNCANDO
 				print 'TBL_MESA_SEM_ATUACAO_INSERIR Truncada'
 				PRINT ' '
 				PRINT '-------------------------------------------------------------------------------------'
@@ -222,7 +223,7 @@ SET @ARQUIVOESCOLHIDO = (
 
 
 
-		-- =============================================================================================================================================
+		-- ============================================================== Criando a tabela para enviar no e-mail a quantidade de casos que vão entrar
 		drop table if exists #temp_qtde_entradas_gatilhos
 		create table #temp_qtde_entradas_gatilhos
 		(
@@ -256,10 +257,7 @@ SET @ARQUIVOESCOLHIDO = (
 																	AS qtde_MELHORES_TAXAS_ITAU;
 
 
-
-
-		-- ============================================================================================================================================== MERGERS
-
+		-- =========================================================== inserindo nas tabelas que vão visualizar no zaap
 		MERGE 
 			TBL_PJ_DICA_FINAL_BASE_GATILHOS AS Destino
 		USING 
@@ -308,22 +306,25 @@ SET @ARQUIVOESCOLHIDO = (
 		--SELECT
 		--*
 		--FROM	 TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR
-
 		--TAXAS - TEMOS QUE ALIMENTAR A TABELA ORIGEM
 
 		MERGE 
-			TBL_MELHORES_TAXAS_ITAU_PJ AS Destino
+			TBL_MELHORES_TAXAS_ITAU_PJ			AS Destino
 		USING 
-			TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR AS Origem ON (Origem.CNPJ_COMPLETO = Destino.CNPJ_COMPLETO)
+			TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR	AS Origem 
+												ON (Origem.CNPJ_COMPLETO 
+												= Destino.CNPJ_COMPLETO)
  
 		-- Registro existe nas 2 tabelas
-		WHEN MATCHED THEN
-			UPDATE SET 
+		WHEN MATCHED 
+		THEN
+				UPDATE SET 
 				Destino.TAXA_ANT	=	Origem.TAXA_ANT,
 				Destino.TAXA_ATUAL	=	Origem.TAXA_ATUAL
         
 		-- Registro não existe no destino. Vamos inserir.
-		WHEN NOT MATCHED THEN
+		WHEN NOT MATCHED 
+		THEN
 			INSERT
 			VALUES(Origem.CNPJ_COMPLETO, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ORIGEM.TAXA_ANT, ORIGEM.TAXA_ATUAL,  NULL, NULL)
 		;
@@ -333,29 +334,27 @@ SET @ARQUIVOESCOLHIDO = (
 
 
 		SET @MOVE = 'MOVE "' + @DESTINO + '\' + @ARQUIVOESCOLHIDO + '" "' + @CAMINHO_PROCESSADOS + '\' + @ARQUIVOESCOLHIDO + '"';
-
-		PRINT @MOVE
 		--PRINT @COPY 
-		-- Executar o comando usando xp_cmdshell
-		EXEC xp_cmdshell @MOVE;
+		EXEC xp_cmdshell @MOVE;	-- Executar o comando usando xp_cmdshell
 
 
 		-- ================================================================================================================================
 
+		DECLARE @COMPLEMENTO_NOME		VARCHAR(255);
+		DECLARE @NOVO_NOME_ARQUIVO		VARCHAR(255);
+		DECLARE @Renomear				VARCHAR(500);
 
 		-- Remove os primeiros três caracteres
 		SET @ARQUIVOESCOLHIDO = LEFT(@ARQUIVOESCOLHIDO, LEN(@ARQUIVOESCOLHIDO) - 4);
 
 		-- Gera o complemento do nome com segundos e milissegundos
-		DECLARE @COMPLEMENTO_NOME VARCHAR(255);
-		SET @COMPLEMENTO_NOME = RIGHT('0' + CONVERT(VARCHAR(2), DATEPART(SECOND, GETDATE())), 2) + RIGHT('000' + CONVERT(VARCHAR(4), DATEPART(MILLISECOND, GETDATE())), 3);
+		SET @COMPLEMENTO_NOME = RIGHT('0'	+ CONVERT(VARCHAR(2), DATEPART(SECOND, GETDATE())), 2) + 
+								RIGHT('000' + CONVERT(VARCHAR(4), DATEPART(MILLISECOND, GETDATE())), 3);
 
 		-- Monta o novo nome do arquivo com o complemento de nome e a nova extensão
-		DECLARE @NOVO_NOME_ARQUIVO VARCHAR(255);
 		SET @NOVO_NOME_ARQUIVO = @ARQUIVOESCOLHIDO + '_' + @COMPLEMENTO_NOME + '.csv';
 
 		-- Monta o comando de renomear o arquivo
-		DECLARE @Renomear VARCHAR(500);
 		SET @Renomear = 'REN "' + @CAMINHO_PROCESSADOS + '\' + @ARQUIVOESCOLHIDO + '.csv" "' + @NOVO_NOME_ARQUIVO + '"';
 
 		-- Imprime o comando de renomear para verificação
@@ -364,16 +363,9 @@ SET @ARQUIVOESCOLHIDO = (
 		-- Executar o comando usando xp_cmdshell
 		EXEC xp_cmdshell @Renomear;
 
-
-
-
-
-
 		-- ==========================================================================================================================
 
-
-
-		DECLARE @para VARCHAR(1000) = '';
+			DECLARE @para VARCHAR(1000) = '';
 			DECLARE @assunto VARCHAR(1000) = 'Base gatilhos teste';
 			DECLARE @mensagem VARCHAR(MAX) = '';
 
@@ -381,6 +373,7 @@ SET @ARQUIVOESCOLHIDO = (
 			SET @para += 'vinicius@novaquest.com.br;';
 			SET @para += 'micheli@novaquest.com.br';
 			SET @para += 'sistemas@novaquest.com.br';
+			SET @para += 'jefferson.pereira@novaquest.com.br';
 
 			SET @mensagem += '<style type="text/css">';
 			SET @mensagem += 'table, th, td {border: 1px solid black; border-collapse: collapse; padding: 0 5px 0 5px;}';
@@ -418,7 +411,7 @@ SET @ARQUIVOESCOLHIDO = (
 				@body = @mensagem,
 				@body_format = 'HTML';
  end
-	 else
+	else
 	 begin
 			
 			DECLARE @para1 VARCHAR(1000)		= '';
@@ -431,6 +424,7 @@ SET @ARQUIVOESCOLHIDO = (
 			SET @para1 += 'vinicius@novaquest.com.br;';
 			SET @para1 += 'micheli@novaquest.com.br';
 			SET @para1 += 'sistemas@novaquest.com.br';
+			SET @para1 += 'jefferson.pereira@novaquest.com.br';
 
 			SET @mensagem1 += '<style type="text/css">';
 			SET @mensagem1 += 'table, th, td {border: 1px solid black; border-collapse: collapse; padding: 0 5px 0 5px;}';
@@ -471,79 +465,14 @@ SET @ARQUIVOESCOLHIDO = (
 
 
 
+/*
+	
+	As tabelas ja tem as index CLUSTERED criadas!!!!!
 
+	create CLUSTERED INDEX IX_CNPJ_COMPLETO on TBL_MESA_SEM_ATUACAO (CNPJ_COMPLETO)
 
+	create CLUSTERED INDEX IX_CNPJ_COMPLETO_DICA_FINAL on TBL_PJ_DICA_FINAL_BASE_GATILHOS(CNPJ_COMPLETO)
 
+	create CLUSTERED INDEX IX_CNPJ_COMPLETO_MELHORES_TAXAS on TBL_MELHORES_TAXAS_ITAU_PJ(CNPJ_COMPLETO)
 
-
-
-
-
-
-
-
-
-
-		select  top 10 * from TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR_TEMP
-		select  top 10 * from TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR_TEMP
-		select  top 10 * from TBL_MESA_SEM_ATUACAO_INSERIR_TEMP
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-			
-	--create table	TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR_TEMP(
-	--	CNPJ_COMPLETO	VARCHAR(255),
-	--	NOME_CLI	VARCHAR(255),
-	--	taxa_ant	VARCHAR(255),
-	--	taxa_atual	VARCHAR(255)
-	--)
-
-
-	--create table TBL_MESA_SEM_ATUACAO_INSERIR_TEMP(
-	--CNPJ_COMPLETO	VARCHAR(255),
-	--NOME_CLI		VARCHAR(255),
-	--ATR_CLI			VARCHAR(255),
-	--VLR_CA6_CLI		VARCHAR(255),	
-	--FILA			VARCHAR(255),
-	--Alcada_Mesa		VARCHAR(255)
-
-	DICA_CLI_FINAL
-	000067933000104
-	SELECT	
-				count(distinct min(t.DICA_CLI_FINAL)), CNPJ_COMPLETO
-				--''								AS	CONTRATO_TIT,
-				--								DICA_CLI_FINAL
-				FROM	#temp_base_gatilho		t
-				where     DICA_CLI_FINAL			is not null
-				--and	CNPJ_COMPLETO			like '%000067933000104%'
-				group by CNPJ_COMPLETO
-				having count(distinct t.DICA_CLI_FINAL) >1
-
-
-				select CNPJ_COMPLETO,max(DICA_CLI_FINAL) as [DICA_CLI_FINAL] from #temp_base_gatilho
-				where CNPJ_COMPLETO like '%000067933000104%'
-				group by CNPJ_COMPLETO
-
-
-
+*/
