@@ -1,3 +1,16 @@
+/*
+DATA: 17/04/2024
+NOME DO JOB: [ITAU PJ] - BASE GATILHOS INSERIR:
+AUTOR: JOÃO LUIZ - TI
+SOLICITANTE: MICHELI ENKIN
+MOTIVO: AUTOMATIZAR O PROCESSO, ESTAVAMOS FAZENDO MANUALMENTE.
+
+TUTORIAL: extraia o arquivo do .zip e deixe ele com a nomeclatura ( base_gatilho_data.csv ) e execute o job.
+
+
+OBS: O SCRIPT ELE BUSCA A PASTA DO EDI ANTES DAS 14:00H NO MODELO (DIA_MES) E DEPOIS DAS 14:00H NO MODELO (DIA_MES_1)
+*/
+
 
 use safra;
 
@@ -167,10 +180,7 @@ SET @ARQUIVOESCOLHIDO = (
 		-- =======================================================================================
 
 				truncate table TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR; -- TRUNCANDO
-				print 'TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR Truncada'
-				PRINT ' '
-				PRINT '-------------------------------------------------------------------------------------'
-
+			
 				insert INTO TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR
 				SELECT	distinct 
 				RIGHT(CNPJ_COMPLETO, 15)		AS	CNPJ_COMPLETO,
@@ -184,11 +194,7 @@ SET @ARQUIVOESCOLHIDO = (
 		-- ======================================================================================
 
 				truncate table TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR; -- TRUNCANDO
-				print 'TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR Truncada'
-				PRINT ' '
-				PRINT '-------------------------------------------------------------------------------------'
 			
-
 				insert INTO TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR
 				SELECT distinct
 				RIGHT(CNPJ_COMPLETO, 15)		AS	CNPJ_COMPLETO,
@@ -204,10 +210,7 @@ SET @ARQUIVOESCOLHIDO = (
 		-- =======================================================================
 
 				truncate table TBL_MESA_SEM_ATUACAO_INSERIR; -- TRUNCANDO
-				print 'TBL_MESA_SEM_ATUACAO_INSERIR Truncada'
-				PRINT ' '
-				PRINT '-------------------------------------------------------------------------------------'
-
+			
 				insert INTO TBL_MESA_SEM_ATUACAO_INSERIR
 				SELECT distinct
 				RIGHT(CNPJ_COMPLETO, 15)		AS	CNPJ_COMPLETO,
@@ -366,14 +369,17 @@ SET @ARQUIVOESCOLHIDO = (
 		-- ==========================================================================================================================
 
 			DECLARE @para VARCHAR(1000) = '';
-			DECLARE @assunto VARCHAR(1000) = 'Base gatilhos teste';
+			DECLARE @assunto VARCHAR(1000) = 'BASE GATILHOS - ' + CONVERT(varchar,CAST(GETDATE()AS date));
 			DECLARE @mensagem VARCHAR(MAX) = '';
 
+			--SET @para += 'everton.santos@novaquest.com.br>;';
+			--SET @para += 'victor.luis@novaquest.com.br;';
+			--SET @para += 'marcos.damasceno@novaquest.com.br;';
+			--SET @para += 'mariuxa.tiburcio@novaquest.com.br;';
 			SET @para += 'joao.reis@novaquest.com.br;';
-			SET @para += 'vinicius@novaquest.com.br;';
-			SET @para += 'micheli@novaquest.com.br';
-			SET @para += 'sistemas@novaquest.com.br';
-			SET @para += 'jefferson.pereira@novaquest.com.br';
+			--SET @para += 'vinicius@novaquest.com.br;';
+			--SET @para += 'micheli@novaquest.com.br';
+			--SET @para += 'sistemas@novaquest.com.br';
 
 			SET @mensagem += '<style type="text/css">';
 			SET @mensagem += 'table, th, td {border: 1px solid black; border-collapse: collapse; padding: 0 5px 0 5px;}';
@@ -381,7 +387,7 @@ SET @ARQUIVOESCOLHIDO = (
 			SET @mensagem += '</style>';
 			SET @mensagem += '<style type="text/css">';
 			SET @mensagem += 'table, th, td {border: 1px solid black; border-collapse: collapse; padding: 0 5px 0 5px;}';
-			SET @mensagem += 'th {background-color: #581845;color:white}'; -- Estilo para o cabeçalho
+			SET @mensagem += 'th {background-color: #FF7200;color:white}'; -- Estilo para o cabeçalho
 			SET @mensagem += 'p {font-size: 12pt;}';
 			SET @mensagem += '</style>';
 
@@ -403,7 +409,7 @@ SET @ARQUIVOESCOLHIDO = (
 
 			SET @mensagem += '</table>';
 			SET @mensagem += '</br>';
-			SET @mensagem += '<h5 style="text-align: center;">Nome do job: [TI] - Retirada BlakList: </h5>';
+			SET @mensagem += '<h5 style="text-align: center;">Nome do job: [ITAU PJ] - BASE GATILHOS INSERIR </h5>';
 
 			EXEC MSDB.DBO.SP_SEND_DBMAIL
 				@recipients = @para,
@@ -432,7 +438,7 @@ SET @ARQUIVOESCOLHIDO = (
 			SET @mensagem1 += '</style>';
 			SET @mensagem1 += '<style type="text/css">';
 			SET @mensagem1 += 'table, th, td {border: 1px solid black; border-collapse: collapse; padding: 0 5px 0 5px;}';
-			SET @mensagem1 += 'th {background-color: #581845;color:white}'; -- Estilo para o cabeçalho
+			SET @mensagem1 += 'th {background-color: #f28500;color:white}'; -- Estilo para o cabeçalho
 			SET @mensagem1 += 'p {font-size: 12pt;}';
 			SET @mensagem1 += '</style>';
 
