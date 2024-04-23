@@ -243,20 +243,26 @@ SET @ARQUIVOESCOLHIDO = (
 				COUNT		(ai.CNPJ_COMPLETO)
 				FROM		TBL_PJ_DICA_FINAL_BASE_GATILHOS_INSERIR	ai
 				LEFT JOIN	TBL_PJ_DICA_FINAL_BASE_GATILHOS			ma 
-				ON			ai.CNPJ_COMPLETO						= ma.CNPJ_COMPLETO)	
+				ON			ai.CNPJ_COMPLETO						= ma.CNPJ_COMPLETO
+				where		ma.CNPJ_COMPLETO is null
+				)	
 																	AS qtde_DICA_FINAL,
 			(	SELECT 
 				COUNT		(ai.CNPJ_COMPLETO)
 				FROM		TBL_MESA_SEM_ATUACAO_INSERIR			ai
 				LEFT JOIN	TBL_MESA_SEM_ATUACAO					ma 
-				ON			ai.CNPJ_COMPLETO						= ma.CNPJ_COMPLETO)	
+				ON			ai.CNPJ_COMPLETO						= ma.CNPJ_COMPLETO
+				where		ma.CNPJ_COMPLETO is null				
+				)	
 																	AS qtde_MESA_SEM_ATUACAO,
 
 			(	SELECT 
 				COUNT		(ai.CNPJ_COMPLETO)
 				FROM		TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR		ai
 				LEFT JOIN	TBL_MELHORES_TAXAS_ITAU_PJ				ma 
-				ON			ai.CNPJ_COMPLETO						= ma.CNPJ_COMPLETO) 
+				ON			ai.CNPJ_COMPLETO						= ma.CNPJ_COMPLETO
+				where		ma.CNPJ_COMPLETO is null
+				) 
 																	AS qtde_MELHORES_TAXAS_ITAU;
 
 
@@ -421,7 +427,7 @@ SET @ARQUIVOESCOLHIDO = (
 	 begin
 			
 			DECLARE @para1 VARCHAR(1000)		= '';
-			DECLARE @assunto1 VARCHAR(1000)	= 'Base gatilhos teste';
+			DECLARE @assunto1 VARCHAR(1000) = 'BASE GATILHOS - ' + CONVERT(varchar,CAST(GETDATE()AS date));
 			DECLARE @mensagem1 VARCHAR(MAX)	= '';
 
 			SET @assunto1 = 'Base gatilhos teste';
