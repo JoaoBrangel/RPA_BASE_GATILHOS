@@ -316,11 +316,21 @@ SET @ARQUIVOESCOLHIDO = (
 		--*
 		--FROM	 TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR
 		--TAXAS - TEMOS QUE ALIMENTAR A TABELA ORIGEM
+		WITH CTE AS (
+			SELECT
+				Origem.CNPJ_COMPLETO,
+				MIN(Origem.TAXA_ANT) AS MinTaxaAnt,
+				MIN(Origem.TAXA_ATUAL) AS MinTaxaAtual
+			FROM
+				TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR AS Origem
+			GROUP BY
+				Origem.CNPJ_COMPLETO
+		)
 
 		MERGE 
 			TBL_MELHORES_TAXAS_ITAU_PJ			AS Destino
 		USING 
-			TBL_MELHORES_TAXAS_ITAU_PJ_INSERIR	AS Origem 
+			cte	AS Origem 
 												ON (Origem.CNPJ_COMPLETO 
 												= Destino.CNPJ_COMPLETO)
  
@@ -328,14 +338,14 @@ SET @ARQUIVOESCOLHIDO = (
 		WHEN MATCHED 
 		THEN
 				UPDATE SET 
-				Destino.TAXA_ANT	=	Origem.TAXA_ANT,
-				Destino.TAXA_ATUAL	=	Origem.TAXA_ATUAL
+					Destino.TAXA_ANT = Origem.MinTaxaAnt,
+					Destino.TAXA_ATUAL = Origem.MinTaxaAtual
         
 		-- Registro não existe no destino. Vamos inserir.
 		WHEN NOT MATCHED 
 		THEN
 			INSERT
-			VALUES(Origem.CNPJ_COMPLETO, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ORIGEM.TAXA_ANT, ORIGEM.TAXA_ATUAL,  NULL, NULL)
+			VALUES(Origem.CNPJ_COMPLETO, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ORIGEM.MinTaxaAnt, ORIGEM.MinTaxaAtual,  NULL, NULL)
 		;
 
 		--================================================================================================================================--
@@ -375,17 +385,18 @@ SET @ARQUIVOESCOLHIDO = (
 		-- ==========================================================================================================================
 
 			DECLARE @para VARCHAR(1000) = '';
-			DECLARE @assunto VARCHAR(1000) = 'BASE GATILHOS - ' + CONVERT(varchar,CAST(GETDATE()AS date));
+			DECLARE @assunto VARCHAR(1000) = 'BASE GATILHOS - ' +  + FORMAT(GETDATE(), 'dd/MM/yyyy');
 			DECLARE @mensagem VARCHAR(MAX) = '';
 
-			--SET @para += 'everton.santos@novaquest.com.br>;';
-			--SET @para += 'victor.luis@novaquest.com.br;';
-			--SET @para += 'marcos.damasceno@novaquest.com.br;';
-			--SET @para += 'mariuxa.tiburcio@novaquest.com.br;';
+			SET @para += 'everton.santos@novaquest.com.br>;';
+			SET @para += 'victor.luis@novaquest.com.br;';
+			SET @para += 'marcos.damasceno@novaquest.com.br;';
+			SET @para += 'mariuxa.tiburcio@novaquest.com.br;';
 			SET @para += 'joao.reis@novaquest.com.br;';
-			--SET @para += 'vinicius@novaquest.com.br;';
-			--SET @para += 'micheli@novaquest.com.br';
-			--SET @para += 'sistemas@novaquest.com.br';
+			SET @para += 'vinicius@novaquest.com.br;';
+			SET @para += 'micheli@novaquest.com.br;';
+			SET @para += 'sistemas@novaquest.com.br;';
+			SET @para += 'everton.santos@novaquest.com.br;';
 
 			SET @mensagem += '<style type="text/css">';
 			SET @mensagem += 'table, th, td {border: 1px solid black; border-collapse: collapse; padding: 0 5px 0 5px;}';
@@ -427,10 +438,10 @@ SET @ARQUIVOESCOLHIDO = (
 	 begin
 			
 			DECLARE @para1 VARCHAR(1000)		= '';
-			DECLARE @assunto1 VARCHAR(1000) = 'BASE GATILHOS - ' + CONVERT(varchar,CAST(GETDATE()AS date));
+			DECLARE @assunto1 VARCHAR(1000) = 'BASE GATILHOS - ' + FORMAT(GETDATE(), 'dd/MM/yyyy');
 			DECLARE @mensagem1 VARCHAR(MAX)	= '';
 
-			SET @assunto1 = 'Base gatilhos teste';
+			SET @assunto1 = 'Base gatilhos erro';
 
 			SET @para1 += 'joao.reis@novaquest.com.br;';
 			SET @para1 += 'vinicius@novaquest.com.br;';
@@ -454,16 +465,6 @@ SET @ARQUIVOESCOLHIDO = (
 			SET @mensagem1 += '<table align="center" style="text-align: center;" >';
 			SET @mensagem1 += '<tr>';
 			SET @mensagem1 += '<th>Arquivo não encontrado</th>';
-			--SET @mensagem += '<th>MESA_SEM_ATUACAO</th>';
-			--SET @mensagem += '<th>MELHORES_TAXAS_ITAU_PJ</th>';
-			--SET @mensagem += '</tr>';
-			--SET @mensagem += (SELECT
-			--					'<tr><td>' +qtde_DICA_FINAL + '</td>' +
-			--					'<td>' +	qtde_MESA_SEM_ATUACAO + '</td>' +
-			--					'<td>' +	qtde_MELHORES_TAXAS_ITAU + '</td></tr>'
-			--				 FROM #temp_qtde_entradas_gatilhos
-			--				 FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)');
-
 			SET @mensagem1 += '</table>';
 			SET @mensagem1 += '</br>';
 			SET @mensagem1 += '<h5 style="text-align: center;">Nome do job: [ITAU PJ] - BASE GATILHOS INSERIR: </h5>';
